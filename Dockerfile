@@ -13,6 +13,10 @@ COPY ./package*.json ./
 COPY ./tsconfig.json ./
 COPY ./tsup.config.ts ./
 
+# patch-package corre en el postinstall de npm ci: los parches tienen que estar
+# antes. Ver patches/README.md y DESARSOFT.md.
+COPY ./patches ./patches
+
 RUN npm ci --silent
 
 COPY ./src ./src
