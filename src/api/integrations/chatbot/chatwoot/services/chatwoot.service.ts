@@ -520,6 +520,32 @@ export class ChatwootService {
     }
   }
 
+  // DESARSOFT: en un grupo, el nombre del participante sale de su ficha en Chatwoot si la tiene.
+  // El pushName es el que cada persona se pone en su WhatsApp y a veces es solo un emoji.
+  // Si no hay ficha, o la ficha solo tiene el numero, o la busqueda falla, queda el pushName.
+  private readonly nombresParticipantes = new Map<string, { nombre: string; vence: number }>();
+
+  private async nombreParticipante(instance: InstanceDto, body: any): Promise<string> {
+    const pushName = body.pushName;
+    try {
+      const raw =
+        body.key.addressingMode === 'lid' && !body.key.fromMe && body.key.participantAlt
+          ? body.key.participantAlt.split('@')[0].split(':')[0]
+          : body.key.participant.split('@')[0].split(':')[0];
+      const clave = `${instance.instanceName}:${raw}`;
+      const guardado = this.nombresParticipantes.get(clave);
+      if (guardado && guardado.vence > Date.now()) {
+        return guardado.nombre || pushName;
+      }
+      const contacto = await this.findContact(instance, raw);
+      const nombre = contacto?.name && !/^[+\d\s()-]+$/.test(contacto.name) ? contacto.name : '';
+      this.nombresParticipantes.set(clave, { nombre, vence: Date.now() + 10 * 60 * 1000 });
+      return nombre || pushName;
+    } catch {
+      return pushName;
+    }
+  }
+
   private async mergeContacts(baseId: number, mergeId: number) {
     try {
       const contact = await chatwootRequest(this.getClientCwConfig(), {
@@ -2085,7 +2111,7 @@ export class ChatwootService {
           fileStream.push(null);
 
           if (body.key.remoteJid.includes('@g.us')) {
-            const participantName = body.pushName;
+            const participantName = await this.nombreParticipante(instance, body);
             const rawPhoneNumber =
               body.key.addressingMode === 'lid' && !body.key.fromMe && body.key.participantAlt
                 ? body.key.participantAlt.split('@')[0].split(':')[0]
@@ -2267,7 +2293,7 @@ export class ChatwootService {
         }
 
         if (body.key.remoteJid.includes('@g.us')) {
-          const participantName = body.pushName;
+          const participantName = await this.nombreParticipante(instance, body);
           const rawPhoneNumber =
             body.key.addressingMode === 'lid' && !body.key.fromMe && body.key.participantAlt
               ? body.key.participantAlt.split('@')[0].split(':')[0]

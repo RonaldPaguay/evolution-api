@@ -1,15 +1,15 @@
 # Fork de DESARSOFT
 
-Fork de [`evolution-foundation/evolution-api`](https://github.com/evolution-foundation/evolution-api) con un solo objetivo: **poder vincular un teléfono nuevo**, cosa que el upstream no permite desde el 2026-07-28.
+Fork de [`evolution-foundation/evolution-api`](https://github.com/evolution-foundation/evolution-api) con dos objetivos: **poder vincular un teléfono nuevo**, cosa que el upstream no permite desde el 2026-07-28, y **mostrar en Chatwoot el nombre real de quien escribe en un grupo** (desde el 2026-10-27).
 
-Se usa para espejar la línea de WhatsApp de Ventas en Chatwoot. El detalle del servicio (servidor, secretos, operación) vive en el vault `PCGerenteAdmin`, en `infraestructura/whatsapp-ventas.md`.
+Se usa para capturar las líneas de WhatsApp de la oficina y espejar Ventas y Soporte en Chatwoot. El detalle del servicio (servidor, secretos, operación) vive en el vault `PCGerenteAdmin`, en `infraestructura/evolution.md`.
 
 ## Ramas
 
 | Rama | Qué es |
 |---|---|
 | `main` | Espejo del upstream. No se toca |
-| `desarsoft/2.3.7-companion-fix` | Lo que corre en producción: la etiqueta `2.3.7` del upstream más el arreglo de vinculación |
+| `desarsoft/2.3.7-companion-fix` | Lo que corre en producción: la etiqueta `2.3.7` del upstream más el arreglo de vinculación y el de nombres en grupos |
 
 La rama parte de la etiqueta **`2.3.7`**, la última estable del upstream, no de `main`. `main` es la línea 2.4 en desarrollo y trae cosas que no queremos: un módulo de licencias, un canal "evohub" y dependencias a medio migrar.
 
@@ -44,6 +44,18 @@ Tres cosas, nada más:
 No agrega llamadas de red, no toca el manejo de mensajes y no cambia nada fuera del emparejamiento.
 
 **Lo que no se trajo del PR 2727:** todo lo demás. El PR está hecho sobre la rama de desarrollo del autor y arrastra el módulo de licencias, el canal "evohub" y una migración de dependencias. De ahí salió solo el archivo del parche.
+
+## Nombres de los participantes de un grupo
+
+En un grupo, Evolution encabeza cada mensaje que manda a Chatwoot con `**<teléfono> - <nombre>:**`. Upstream usa el `pushName`: el nombre que cada persona se pone en su propio WhatsApp, que a veces es solo un emoji.
+
+| Archivo | Cambio |
+|---|---|
+| `src/api/integrations/chatbot/chatwoot/services/chatwoot.service.ts` | `nombreParticipante()`: busca al participante en Chatwoot por su teléfono (`findContact`) y usa el nombre de su ficha. Se usa en los dos lugares que arman el encabezado: mensajes con adjunto y mensajes de texto |
+
+- Si no hay ficha, si la ficha solo tiene el número, o si la búsqueda falla, queda el `pushName` como en upstream.
+- El resultado se guarda 10 minutos en memoria por instancia y teléfono, para no consultar a Chatwoot en cada mensaje.
+- No toca nada fuera de los grupos.
 
 ## Reproducir la imagen desde cero
 
