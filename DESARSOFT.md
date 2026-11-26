@@ -57,6 +57,19 @@ En un grupo, Evolution encabeza cada mensaje que manda a Chatwoot con `**<teléf
 - El resultado se guarda 10 minutos en memoria por instancia y teléfono, para no consultar a Chatwoot en cada mensaje.
 - No toca nada fuera de los grupos.
 
+## Teléfono e identificador interno (LID)
+
+WhatsApp guarda muchos chats con un identificador interno (`<n>@lid`) en vez del teléfono. Baileys sabe unir los dos (`signalRepository.lidMapping`), pero upstream no lo expone y el mapa no queda en la base (desde el 2026-11-26).
+
+| Archivo | Cambio |
+|---|---|
+| `src/api/routes/chat.router.ts` | Ruta `POST /chat/lidMapping/{instancia}`, con el mismo cuerpo que `whatsappNumbers`: `{"numbers": [...]}` |
+| `src/api/controllers/chat.controller.ts` | `lidMapping()`, que delega en el servicio |
+| `src/api/integrations/channel/whatsapp/whatsapp.baileys.service.ts` | `lidMapping()`: un teléfono devuelve su LID; un `<n>@lid` devuelve su teléfono. Lo que no está en el mapa local se pregunta a WhatsApp por USync, en un lote |
+
+- Respuesta: `[{"number": "5939...", "jid": "5939...@s.whatsapp.net", "lid": "<n>@lid"}]`. Si no se resuelve, el campo que falta va en `null`.
+- Lotes chicos y espaciados: es la misma consulta que hace WhatsApp Web, pero miles seguidas pueden llamar la atención sobre la línea.
+
 ## Reproducir la imagen desde cero
 
 Sirve para el servidor de oficina y para cualquier máquina nueva si ese servidor se pierde. Solo hace falta Docker y acceso a internet.

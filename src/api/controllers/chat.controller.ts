@@ -26,6 +26,10 @@ export class ChatController {
     return await this.waMonitor.waInstances[instanceName].whatsappNumber(data);
   }
 
+  public async lidMapping({ instanceName }: InstanceDto, data: WhatsAppNumberDto) {
+    return await this.waMonitor.waInstances[instanceName].lidMapping(data);
+  }
+
   public async readMessage({ instanceName }: InstanceDto, data: ReadMessageDto) {
     return await this.waMonitor.waInstances[instanceName].markMessageAsRead(data);
   }

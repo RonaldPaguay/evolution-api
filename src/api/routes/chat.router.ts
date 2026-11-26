@@ -60,6 +60,22 @@ export class ChatRouter extends RouterBroker {
           return res.status(HttpStatus.BAD_REQUEST).json(error);
         }
       })
+      .post(this.routerPath('lidMapping'), ...guards, async (req, res) => {
+        // DESARSOFT: une teléfono e identificador interno (LID), en los dos sentidos
+        try {
+          const response = await this.dataValidate<WhatsAppNumberDto>({
+            request: req,
+            schema: whatsappNumberSchema,
+            ClassRef: WhatsAppNumberDto,
+            execute: (instance, data) => chatController.lidMapping(instance, data),
+          });
+
+          return res.status(HttpStatus.OK).json(response);
+        } catch (error) {
+          console.log(error);
+          return res.status(HttpStatus.BAD_REQUEST).json(error);
+        }
+      })
       .post(this.routerPath('markMessageAsRead'), ...guards, async (req, res) => {
         const response = await this.dataValidate<ReadMessageDto>({
           request: req,

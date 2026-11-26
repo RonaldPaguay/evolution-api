@@ -3504,6 +3504,38 @@ export class BaileysStartupService extends ChannelStartupService {
   }
 
   // Chat Controller
+
+  /**
+   * DESARSOFT: une teléfono e identificador interno (LID) con el mapa de Baileys.
+   * Cada entrada es un teléfono (devuelve su LID) o un `<n>@lid` (devuelve su teléfono).
+   * Lo que no está en el mapa local se le pregunta a WhatsApp por USync, en un solo lote.
+   */
+  public async lidMapping(data: WhatsAppNumberDto) {
+    const mapa = this.client.signalRepository.lidMapping;
+    const sinDispositivo = (j?: string | null) => (j ? jidNormalizedUser(j) : null);
+    const pns: string[] = [];
+    const lids: string[] = [];
+    for (const n of data.numbers) {
+      if (n.endsWith('@lid')) lids.push(sinDispositivo(n));
+      else pns.push(`${n.replace(/\D/g, '')}@s.whatsapp.net`);
+    }
+    const salida: { number: string | null; jid: string | null; lid: string | null }[] = [];
+    if (pns.length) {
+      const pares = (await mapa.getLIDsForPNs(pns)) || [];
+      const por = new Map(pares.map((p) => [sinDispositivo(p.pn), sinDispositivo(p.lid)]));
+      for (const pn of pns) salida.push({ number: pn.split('@')[0], jid: pn, lid: por.get(pn) ?? null });
+    }
+    if (lids.length) {
+      const pares = (await mapa.getPNsForLIDs(lids)) || [];
+      const por = new Map(pares.map((p) => [sinDispositivo(p.lid), sinDispositivo(p.pn)]));
+      for (const lid of lids) {
+        const pn = por.get(lid) ?? null;
+        salida.push({ number: pn ? pn.split('@')[0] : null, jid: pn, lid });
+      }
+    }
+    return salida;
+  }
+
   public async whatsappNumber(data: WhatsAppNumberDto) {
     const jids: {
       groups: { number: string; jid: string }[];
