@@ -70,6 +70,16 @@ WhatsApp guarda muchos chats con un identificador interno (`<n>@lid`) en vez del
 - Respuesta: `[{"number": "5939...", "jid": "5939...@s.whatsapp.net", "lid": "<n>@lid"}]`. Si no se resuelve, el campo que falta va en `null`.
 - Lotes chicos y espaciados: es la misma consulta que hace WhatsApp Web, pero miles seguidas pueden llamar la atención sobre la línea.
 
+## Código de 8 letras
+
+Vincular con número de teléfono (`GET /instance/connect/{instancia}?number=…`) daba siempre "código incorrecto". La causa: `connectionUpdate` llama a `requestPairingCode` en cada rotación del QR (~20 s), y cada llamada anula el código anterior. Cuando la persona terminaba de teclearlo, ya no valía.
+
+| Archivo | Cambio |
+|---|---|
+| `src/api/integrations/channel/whatsapp/whatsapp.baileys.service.ts` | El código se pide una sola vez por intento: `pairingCode = pairingCode \|\| await requestPairingCode(...)` |
+
+Para un intento nuevo, la instancia tiene que quedar en `close` (`DELETE /instance/logout/{instancia}`) antes de pedir el código.
+
 ## Estados (`<status>`) y cola offline
 
 Desde el 2026-11-25, WhatsApp entrega los estados de los contactos como stanzas `<status>`, cuando antes llegaban como `<message>` de `status@broadcast`. Baileys `rc14` solo escucha `CB:message`, así que nunca los confirma. Los acks pendientes llenan la ventana de entrega del servidor, y el servidor deja de mandar **todo** lo demás.

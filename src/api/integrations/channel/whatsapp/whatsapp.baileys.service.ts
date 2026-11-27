@@ -374,7 +374,10 @@ export class BaileysStartupService extends ChannelStartupService {
 
       if (this.phoneNumber) {
         await delay(1000);
-        this.instance.qrcode.pairingCode = await this.client.requestPairingCode(this.phoneNumber);
+        // DESARSOFT 2026-11-25: cada llamada a requestPairingCode anula el código anterior, y este bloque corre
+        // en cada rotación del QR (~20 s). Se pide una sola vez por intento para que el código mostrado siga vigente.
+        this.instance.qrcode.pairingCode =
+          this.instance.qrcode.pairingCode || (await this.client.requestPairingCode(this.phoneNumber));
       } else {
         this.instance.qrcode.pairingCode = null;
       }
