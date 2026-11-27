@@ -70,6 +70,19 @@ WhatsApp guarda muchos chats con un identificador interno (`<n>@lid`) en vez del
 - Respuesta: `[{"number": "5939...", "jid": "5939...@s.whatsapp.net", "lid": "<n>@lid"}]`. Si no se resuelve, el campo que falta va en `null`.
 - Lotes chicos y espaciados: es la misma consulta que hace WhatsApp Web, pero miles seguidas pueden llamar la atención sobre la línea.
 
+## Estados (`<status>`) y cola offline
+
+Desde el 2026-11-25, WhatsApp entrega los estados de los contactos como stanzas `<status>`, cuando antes llegaban como `<message>` de `status@broadcast`. Baileys `rc14` solo escucha `CB:message`, así que nunca los confirma. Los acks pendientes llenan la ventana de entrega del servidor, y el servidor deja de mandar **todo** lo demás.
+
+Síntoma: la instancia sigue en `open` y el envío funciona, pero no entra ningún mensaje durante horas. Cada ~50 minutos el servidor corta con `stream:error` reclamando `<ack class="status" …>`. Reiniciar no sirve. Volver a vincular sirve unas horas.
+
+| Archivo (dentro de `patches/baileys+7.0.0-rc14.patch`) | Cambio |
+|---|---|
+| `lib/Socket/messages-recv.js` | `ws.on('CB:status', …)` confirma el nodo con `sendMessageAck` y lo descarta. Los estados no se procesan |
+| `lib/Utils/offline-node-processor.js` | Cada nodo de la cola offline tiene 20 s. Si se cuelga, se registra `[offline-timeout]` y la cola sigue, en vez de frenar todo lo que viene detrás |
+
+Verificar dentro de la imagen: `grep -c "CB:status" node_modules/baileys/lib/Socket/messages-recv.js` tiene que devolver 1.
+
 ## Reproducir la imagen desde cero
 
 Sirve para el servidor de oficina y para cualquier máquina nueva si ese servidor se pierde. Solo hace falta Docker y acceso a internet.
